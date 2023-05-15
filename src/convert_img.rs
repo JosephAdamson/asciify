@@ -7,34 +7,42 @@ static ASCII: [char; 32] = ['N', '@', '#', 'W', '$', '9', '8', '7', '6',
  ' ', ' ', ' ', ' ', ' ', ' '];
 
 
+// Returns an descaled Dynamic image
 fn normalize_img(img: DynamicImage, pixel_dims: u32,) -> DynamicImage {
     return img.resize(pixel_dims, pixel_dims, FilterType::Gaussian);
 }
 
-
+/// Returns a char mapping
+/// 
+/// # Arguments
+/// *   'intensity' - pixel intensity
 fn asciify_intensity(intensity: u8) -> char {
-    let index = intensity / 8;
+    let index: u8 = intensity / 8;
     return ASCII[index as usize];
 } 
 
-
+/// Returns a String of pixel intensities mapped to char values.
+/// 
+/// # Arguments
+/// *   'path'  - file path to the text file
+/// *   'scale' - maximum bound used for width
 fn generate_img(path: PathBuf, scale: u32) -> String {
     let mut img: DynamicImage = image::open(path).expect("File not Found...");
     
-    // normalize img 
     img = normalize_img(img, scale);
     let (width, height) = img.dimensions();
+    println!("{}, {}", width, height);
     let mut img_str: String = String::new();
 
     for y in 0..height {
         for x in 0..width {
             if y % 2 == 0 && x % 1 == 0 {
                 let pixel: Rgba<u8> = img.get_pixel(x, y);
-                let mut intensity = pixel[0] / 3 + pixel[1] / 3 + pixel[2] / 3;
+                let mut intensity: u8 = pixel[0] / 3 + pixel[1] / 3 + pixel[2] / 3;
                 if pixel[3] == 0 {
                     intensity = 0;
                 }
-                let token = asciify_intensity(intensity);
+                let token: char = asciify_intensity(intensity);
                 img_str.push(token);
         }
         }
@@ -46,7 +54,7 @@ fn generate_img(path: PathBuf, scale: u32) -> String {
 }
 
 
-
+/// Prints asciified image to the console
 pub fn print_img_to_console(path_arg: String) {
     let path: PathBuf = PathBuf::from(path_arg);
     let img: String = generate_img(path, 72);
