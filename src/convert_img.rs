@@ -1,4 +1,8 @@
-use image::{ DynamicImage, GenericImageView, Rgba };
+use image::{ 
+    DynamicImage, 
+    GenericImageView, 
+    Rgba 
+};
 use image::imageops::FilterType;
 use std::path::PathBuf;
 
@@ -8,13 +12,14 @@ static ASCII: [char; 32] = ['N', '@', '#', 'W', '$', '9', '8', '7', '6',
  ' ', ' ', ' ', ' ', ' ', ' '];
 
 
-// Returns an descaled Dynamic image
-fn normalize_img(img: DynamicImage, pixel_dims: u32,) -> DynamicImage {
+/// Returns an descaled Dynamic image
+fn normalize_img(img: DynamicImage, pixel_scale: u32,) -> DynamicImage {
     let (width, height) = img.dimensions();
-    if width < pixel_dims {
+    // if image is smaller than the provided scale we use the original width
+    if width < pixel_scale {
         return img.resize(width, height, FilterType::Gaussian);
     } else {
-        return img.resize(pixel_dims, pixel_dims, FilterType::Gaussian);
+        return img.resize(pixel_scale, pixel_scale, FilterType::Gaussian);
     }
 }
 

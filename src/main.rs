@@ -1,6 +1,11 @@
 mod convert_img;
+mod img_out;
+mod args;
+
+use args::AsciiArgs;
+use clap::Parser;
 
 fn main() {
-    let p: String = String::from("big_rust.png");
-    convert_img::print_img_to_console(p);
+    let args: AsciiArgs = AsciiArgs::parse();
+    println!("{:?}", args);
 }
