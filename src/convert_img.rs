@@ -41,7 +41,7 @@ fn asciify_intensity(intensity: i32) -> char {
 /// # Arguments
 /// *   'path'  - file path to the text file
 /// *   'scale' - maximum bound used for width
-fn generate_img(path: PathBuf, scale: u32) -> String {
+pub fn generate_img(path: PathBuf, scale: u32) -> String {
     let mut img: DynamicImage = image::open(path).expect("File not Found...");
     
     img = normalize_img(img, scale);
