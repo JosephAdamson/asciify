@@ -11,5 +11,15 @@ pub struct AsciiArgs {
 
     /// Save ascii output to a .txt file at the given file path
     #[arg(long, short)]
-    pub output_path: Option<String>
+    pub output_path: Option<String>,
+
+    /// Print color ascii image(s) to the terminal
+    #[arg(long, short)]
+    pub color: bool
+}
+
+
+pub struct AsciiToken {
+    pub token: char,
+    pub rbg: (u8, u8, u8)
 }

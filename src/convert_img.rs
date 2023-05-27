@@ -5,11 +5,15 @@ use image::{
 };
 use image::imageops::FilterType;
 use std::path::PathBuf;
+use std::io::Write;
+use termcolor::{ Color, ColorChoice, ColorSpec, StandardStream, WriteColor };
+use crate::utils::AsciiToken;
 
 
 static ASCII: [char; 32] = ['N', '@', '#', 'W', '$', '9', '8', '7', '6', 
 '5', '4', '3', '2', '1', '0', '?', '!', 'a', 'b', 'c', ';', ':', '+', '=', '-', ',',
  ' ', ' ', ' ', ' ', ' ', ' '];
+
 
 
 /// Returns an descaled Dynamic image
@@ -41,12 +45,13 @@ fn asciify_intensity(intensity: i32) -> char {
 /// # Arguments
 /// *   'path'  - file path to the text file
 /// *   'scale' - maximum bound used for width
-pub fn generate_img(path: PathBuf, scale: u32) -> String {
+pub fn generate_img(path: PathBuf, scale: u32) -> Vec<AsciiToken> {
     let mut img: DynamicImage = image::open(path).expect("File not Found...");
     
     img = normalize_img(img, scale);
     let (width, height) = img.dimensions();
-    let mut img_str: String = String::new();
+    //let mut img_str: String = String::new();
+    let mut img_tokens: Vec<AsciiToken> = Vec::new();
 
     for y in 0..height {
         for x in 0..width {
@@ -57,22 +62,44 @@ pub fn generate_img(path: PathBuf, scale: u32) -> String {
                     intensity = -1;
                 }
                 let token: char = asciify_intensity(intensity);
-                img_str.push(token);
+                //img_str.push(token);
+                img_tokens.push(AsciiToken { token, rbg: (pixel[0], pixel[1], pixel[2]) });
         }
         }
         if y % 2 == 0 {
-            img_str.push('\n');
+            // img_str.push('\n');
+            img_tokens.push(AsciiToken {token: '\n', rbg: (0, 0, 0)});
         }
     }
-    return img_str;
+    //return img_str;
+    return img_tokens;
 }
 
 
 /// Prints asciified image to the console
-pub fn print_img_to_console(path_arg: String) {
+/// 
+/// # Arguments
+/// *   'path_arg' - string representation of file path to the text file
+/// *   'color_flag'    - option to print terminal output in color
+pub fn print_img_to_console(path_arg: String, color_flag: bool) {
     let path: PathBuf = PathBuf::from(path_arg);
-    let img: String = generate_img(path, 72);
-    println!("{}", img);
+    //let img: String = generate_img(path, 72, color_flag);
+    //println!("{}", img);
+    let img: Vec<AsciiToken> = generate_img(path, 72);
+    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    if color_flag {
+        for token in img {
+            stdout.set_color(ColorSpec::new().set_fg(
+                Some(Color::Rgb(token.rbg.0, token.rbg.1, token.rbg.2)))
+            ).expect("Failed to set color");
+            write!(&mut stdout, "{}", token.token).expect("failed to write");
+        }
+    } else {
+        let img_str: String = img.iter()
+                                    .map(|ascii_token|{ascii_token.token})
+                                    .collect();
+        println!("{}", img_str);
+    }
 }
 
 
@@ -139,7 +166,8 @@ mod test {
                                                                         
 ");
         let path: PathBuf = PathBuf::from("assets/ferris.jpg");
-        let actual: String = generate_img(path, 72);
+        let res: Vec<AsciiToken> = generate_img(path, 72);
+        let actual: String = res.iter().map(|ascii_token| {ascii_token.token}).collect();
         assert_eq!(expected, actual);
     }
 }
