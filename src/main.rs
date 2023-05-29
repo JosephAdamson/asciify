@@ -13,12 +13,14 @@ fn main() {
 
     if args.save_txt.is_none() {
         for file_path in args.files {
-            print_img_to_console(file_path, args.color, args.detailed);
+            
+            print_img_to_console(file_path, args.color, args.detailed, args.mapping.clone());
         }
     } else {
         save(args.files, 
             args.save_txt.expect("Could not write to file"),
-            args.detailed
+            args.detailed,
+            None
         );
     }    
 }

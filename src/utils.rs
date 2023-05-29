@@ -20,7 +20,10 @@ pub struct AsciiArgs {
     /// Choose to print image composed of a wider array of ascii characters
     /// (70 as opposed to default of 10)
     #[arg(long, short)]
-    pub detailed: bool
+    pub detailed: bool,
+
+    #[arg(long, short)]
+    pub mapping: Option<String>
 }
 
 

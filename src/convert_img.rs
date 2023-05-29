@@ -10,7 +10,7 @@ use termcolor::{ Color, ColorChoice, ColorSpec, StandardStream, WriteColor };
 use crate::utils::AsciiToken;
 
 
-static ASCII_DETAILED: [char; 70] = [
+const ASCII_DETAILED: [char; 70] = [
     ' ', '.', '\'', '`', '^', '"', ',', ':', ';', 'I', 'l', '!', 
     'i', '>', '<', '~', '+', '_', '-', '?', ']', '[', '}', '{', 
     '1', ')', '(', '|', '\\', '/', 't', 'f', 'j', 'r', 'x', 'n', 
@@ -20,7 +20,7 @@ static ASCII_DETAILED: [char; 70] = [
 ];
 
 
-static ASCII_SIMPLE: [char; 10] = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
+const ASCII_SIMPLE: [char; 10] = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
 
 
 const MAX_VALUE: f64 = 255.0;
@@ -42,17 +42,20 @@ fn normalize_img(img: DynamicImage, pixel_scale: u32,) -> DynamicImage {
 /// # Arguments
 /// *   'intensity'     - pixel intensity
 /// *   'detail_flag'   - dictate the amount of ascii characters use 
-fn asciify_intensity(intensity: i32, detail_flag: bool) -> char {
+fn asciify_intensity(intensity: i32, ascii_table: &Vec<char>) -> char {
     if intensity < 0 {
         return ASCII_SIMPLE[0];
     } else {
-        if detail_flag {
-            let index: f64 = (intensity as f64 / MAX_VALUE) * ((ASCII_DETAILED.len() - 1) as f64); 
-            return ASCII_DETAILED[index as usize];
-        } else {
-            let index: f64 = (intensity as f64 / MAX_VALUE) * ((ASCII_SIMPLE.len() - 1) as f64); 
-            return ASCII_SIMPLE[index as usize];
-        }
+        let index: f64 = (intensity as f64 / MAX_VALUE) * ((ascii_table.len() - 1) as f64); 
+        return ascii_table[index as usize];
+
+        // if detail_flag {
+        //     let index: f64 = (intensity as f64 / MAX_VALUE) * ((ASCII_DETAILED.len() - 1) as f64); 
+        //     return ASCII_DETAILED[index as usize];
+        // } else {
+        //     let index: f64 = (intensity as f64 / MAX_VALUE) * ((ASCII_SIMPLE.len() - 1) as f64); 
+        //     return ASCII_SIMPLE[index as usize];
+        // }
     }
 } 
 
@@ -61,12 +64,24 @@ fn asciify_intensity(intensity: i32, detail_flag: bool) -> char {
 /// # Arguments
 /// *   'path'  - file path to the text file
 /// *   'scale' - maximum bound used for width
-pub fn generate_img(path: PathBuf, scale: u32, detail_flag: bool) -> Vec<AsciiToken> {
+/// *   'detail_flag'   - dictate the amount of ascii characters use 
+pub fn generate_img(path: PathBuf, scale: u32, detail_flag: bool, mapping: Option<String>) -> Vec<AsciiToken> {
     let mut img: DynamicImage = image::open(path).expect("File not Found...");
     
     img = normalize_img(img, scale);
     let (width, height) = img.dimensions();
     let mut img_tokens: Vec<AsciiToken> = Vec::new();
+
+    let ascii_table: Vec<char>;
+    if mapping.is_none() {
+        if detail_flag {
+            ascii_table = ASCII_DETAILED.to_vec();
+        } else {
+            ascii_table = ASCII_SIMPLE.to_vec();
+        }
+    } else {
+        ascii_table = mapping.unwrap().chars().collect();
+    }
 
     for y in 0..height {
         for x in 0..width {
@@ -76,7 +91,7 @@ pub fn generate_img(path: PathBuf, scale: u32, detail_flag: bool) -> Vec<AsciiTo
                 if pixel[3] == 0 {
                     intensity = 0;
                 }
-                let token: char = asciify_intensity(intensity, detail_flag);
+                let token: char = asciify_intensity(intensity, &ascii_table);
                 img_tokens.push(AsciiToken { token, rbg: (pixel[0], pixel[1], pixel[2]) });
         }
         }
@@ -93,9 +108,10 @@ pub fn generate_img(path: PathBuf, scale: u32, detail_flag: bool) -> Vec<AsciiTo
 /// # Arguments
 /// *   'path_arg' - string representation of file path to the text file
 /// *   'color_flag'    - option to print terminal output in color
-pub fn print_img_to_console(path_arg: String, color_flag: bool, detail_flag: bool) {
+/// *   'detail_flag'   - dictate the amount of ascii characters use 
+pub fn print_img_to_console(path_arg: String, color_flag: bool, detail_flag: bool, mapping: Option<String>) {
     let path: PathBuf = PathBuf::from(path_arg);
-    let img: Vec<AsciiToken> = generate_img(path, 72, detail_flag);
+    let img: Vec<AsciiToken> = generate_img(path, 72, detail_flag, mapping);
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
     if color_flag {
         for token in img {
@@ -106,8 +122,8 @@ pub fn print_img_to_console(path_arg: String, color_flag: bool, detail_flag: boo
         }
     } else {
         let img_str: String = img.iter()
-                                    .map(|ascii_token|{ascii_token.token})
-                                    .collect();
+            .map(|ascii_token|{ascii_token.token})
+            .collect();
         println!("{}", img_str);
     }
 }
@@ -140,15 +156,15 @@ mod test {
     #[test]
     fn asciify_img_test() {
         let expected: char = '.';
-        let actual: char = asciify_intensity(38, false);
+        let actual: char = asciify_intensity(38, &ASCII_SIMPLE.to_vec());
         assert_eq!(expected, actual);
 
         let expected_2: char = '@';
-        let actual_2: char = asciify_intensity(255, false);
+        let actual_2: char = asciify_intensity(255, &ASCII_SIMPLE.to_vec());
         assert_eq!(expected_2, actual_2);
 
         let expected_3: char = '%';
-        let actual_3: char = asciify_intensity(245, true);
+        let actual_3: char = asciify_intensity(245, &ASCII_DETAILED.to_vec());
         assert_eq!(expected_3, actual_3);
     }
 
@@ -180,7 +196,7 @@ mod test {
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ");
         let path: PathBuf = PathBuf::from("assets/ferris.jpg");
-        let res: Vec<AsciiToken> = generate_img(path, 72, false);
+        let res: Vec<AsciiToken> = generate_img(path, 72, false, None);
         let actual: String = res.iter().map(|ascii_token| {ascii_token.token}).collect();
         assert_eq!(expected, actual);
     }
