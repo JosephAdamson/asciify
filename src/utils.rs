@@ -11,5 +11,20 @@ pub struct AsciiArgs {
 
     /// Save ascii output to a .txt file at the given file path
     #[arg(long, short)]
-    pub output_path: Option<String>
+    pub save_txt: Option<String>,
+
+    /// Print color ascii image(s) to the terminal
+    #[arg(long, short)]
+    pub color: bool,
+
+    /// Choose to print image composed of a wider array of ascii characters
+    /// (70 as opposed to default of 10)
+    #[arg(long, short)]
+    pub detailed: bool
+}
+
+
+pub struct AsciiToken {
+    pub token: char,
+    pub rbg: (u8, u8, u8)
 }
