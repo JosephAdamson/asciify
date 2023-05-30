@@ -22,8 +22,13 @@ pub struct AsciiArgs {
     #[arg(long, short)]
     pub detailed: bool,
 
+    /// Provide a custom mapping of ascii characters used to compose the image
     #[arg(long, short)]
-    pub mapping: Option<String>
+    pub mapping: Option<String>,
+
+    /// Scale factor for output image
+    #[arg(long, short)]
+    pub pixel_scale: Option<u32>
 }
 
 

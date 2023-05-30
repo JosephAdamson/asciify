@@ -48,14 +48,6 @@ fn asciify_intensity(intensity: i32, ascii_table: &Vec<char>) -> char {
     } else {
         let index: f64 = (intensity as f64 / MAX_VALUE) * ((ascii_table.len() - 1) as f64); 
         return ascii_table[index as usize];
-
-        // if detail_flag {
-        //     let index: f64 = (intensity as f64 / MAX_VALUE) * ((ASCII_DETAILED.len() - 1) as f64); 
-        //     return ASCII_DETAILED[index as usize];
-        // } else {
-        //     let index: f64 = (intensity as f64 / MAX_VALUE) * ((ASCII_SIMPLE.len() - 1) as f64); 
-        //     return ASCII_SIMPLE[index as usize];
-        // }
     }
 } 
 
@@ -109,9 +101,13 @@ pub fn generate_img(path: PathBuf, scale: u32, detail_flag: bool, mapping: Optio
 /// *   'path_arg' - string representation of file path to the text file
 /// *   'color_flag'    - option to print terminal output in color
 /// *   'detail_flag'   - dictate the amount of ascii characters use 
-pub fn print_img_to_console(path_arg: String, color_flag: bool, detail_flag: bool, mapping: Option<String>) {
+pub fn print_img_to_console(path_arg: String, color_flag: bool, detail_flag: bool, mapping: Option<String>, pixel_scale: Option<u32>) {
     let path: PathBuf = PathBuf::from(path_arg);
-    let img: Vec<AsciiToken> = generate_img(path, 72, detail_flag, mapping);
+    let scale: u32 = match pixel_scale {
+        Some(scale) => scale,
+        None => 72
+    };
+    let img: Vec<AsciiToken> = generate_img(path, scale, detail_flag, mapping);
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
     if color_flag {
         for token in img {
@@ -197,6 +193,57 @@ mod test {
 ");
         let path: PathBuf = PathBuf::from("assets/ferris.jpg");
         let res: Vec<AsciiToken> = generate_img(path, 72, false, None);
+        let actual: String = res.iter().map(|ascii_token| {ascii_token.token}).collect();
+        assert_eq!(expected, actual);
+    }
+
+    // use a custom mapping to generate a custom image
+    #[test]
+    fn mapping_test() {
+        let expected: String = String::from("}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}---}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}}}}}}}}}}}}}}}}}}}}}}}}}---}---------------}---}}}}}}}}}}}}}}}}}}}}}}}}
+}}}}}}}}}}}}}}}}}}}}}}}}-------------------------}}}}}}}}}}}}}}}}}}}}}}}
+}}}}}}}}}}}}}}}}}}}}---------------------------------}}}}}}}}}}}}}}}}}}}
+}}}}}--}}}}}}}}}----------------------------------------}}}}}}}-----}--}
+}---------}}}}}}-----------------------------------------}}}}-----------
+------------}----------------------------------------------}------------
+------------------------------------------------------------------------
+------------}----------------------------------------------------------}
+}---------------------------------------------------------------------}}
+}}}-----------------------------------------------------------------}}}}
+}}}}}}-----------------------------------------------------------}}}}}}}
+}}}}}}}}---------------------------------------------------------}}}}}}}
+}}}}}}}-----------------------------------------------------------}}}}}}
+}}}}}}}-----------------------------------------------------------}}}}}}
+}}}}}}}}---------------------------------------------------------}}}}}}}
+}}}}}}}}}}----------}}}}}}}--------------------}}}}}}}---------}}}}}}}}}
+}}}}}}}}}}}}---------}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}--------}}}}}}}}}}
+}}}}}}}}}}}}}}-----}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}-----}}}}}}}}}}}
+}}}}}}}}}}}}}}}}----}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}---}}}}}}}}}}}}}
+}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+");
+        let path: PathBuf = PathBuf::from("assets/ferris.jpg");
+        let mapping: Option<String> = Some(String::from("-}"));
+        let res: Vec<AsciiToken> = generate_img(path, 72, false, mapping);
+        let actual: String = res.iter().map(|ascii_token| {ascii_token.token}).collect();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn scale_test() {
+        let expected: String = String::from("@@@@@@@@%%%%@@@@@@@@
+@%@@%%#+====+#%%@%%%
+***%*=--------=*#+**
+%*++----=:-=----=+*%
+@%*===---:::--===+%@
+@@%%#%%%%%%%%%%%#%@@
+@@@@@@@@@@@@@@@@@@@@
+");
+        let path: PathBuf = PathBuf::from("assets/ferris.jpg");
+        let res: Vec<AsciiToken> = generate_img(path, 20, false, None);
         let actual: String = res.iter().map(|ascii_token| {ascii_token.token}).collect();
         assert_eq!(expected, actual);
     }
