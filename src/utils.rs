@@ -1,4 +1,8 @@
 use clap::{ Parser };
+use std::{
+    error::Error,
+    fmt
+};
 
 #[derive(Debug, Default, Parser)]
 #[command(author="Joe Adamson")] 
@@ -35,4 +39,36 @@ pub struct AsciiArgs {
 pub struct AsciiToken {
     pub token: char,
     pub rbg: (u8, u8, u8)
+}
+
+
+pub fn is_supported_format(path_arg: &String) -> bool {
+    let tokens: Vec<&str> = path_arg.split(".").collect();
+    if tokens.len() == 1 {
+        return false;
+    }
+    let last = tokens[tokens.len() - 1];
+    if last == "jpg" || last == "png" || last == "gif" {
+        return true;
+    } 
+    return false;
+}
+
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn supported_format_test() {
+        let dummy: String = String::from("dummy_file.png");
+        assert!(is_supported_format(&dummy));
+    }
+
+    #[test]
+    fn supported_format_test_2() {
+        let dummy: String = String::from("dummy_file.wav");
+        assert_ne!(true, is_supported_format(&dummy));
+    }
 }
