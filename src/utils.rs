@@ -38,6 +38,12 @@ pub struct AsciiToken {
 }
 
 
+pub struct AsciiFrame {
+    pub frame_tokens: Vec<AsciiToken>,
+    pub delay: u64
+}
+
+
 /// Returns file extension for a given file
 /// 
 /// # Arguments

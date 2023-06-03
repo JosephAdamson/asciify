@@ -1,9 +1,15 @@
-use crate::utils::{get_file_extension, is_supported_format, AsciiToken};
+use crate::utils::{get_file_extension, is_supported_format, AsciiFrame, AsciiToken};
 use image::{
     codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage, Frame,
     GenericImageView, Rgba,
 };
-use std::{fs::{File, OpenOptions}, io::Write, path::PathBuf, thread, time};
+use std::{
+    fs::{File, OpenOptions},
+    io::Write,
+    path::PathBuf,
+    thread,
+    time::Duration,
+};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 const ASCII_DETAILED: [char; 70] = [
@@ -81,21 +87,27 @@ fn convert_img_to_ascii_tokens(img: DynamicImage, ascii_table: &Vec<char>) -> Ve
 pub fn convert_gif_to_ascii_tokens(
     gif: GifDecoder<File>,
     ascii_table: &Vec<char>,
-    pixel_scale: u32
-) -> Vec<AsciiToken> {
+    pixel_scale: u32,
+) -> Vec<AsciiFrame> {
     let frames: Vec<Frame> = gif
         .into_frames()
         .collect_frames()
         .expect("Error decoding gif");
-    let mut tokenized_gif:Vec<AsciiToken> = Vec::new();
-    
+    let mut tokenized_gif: Vec<AsciiFrame> = Vec::new();
+
     for frame in frames {
+        let frame_ratio: (u32, u32) = frame.delay().clone().numer_denom_ms();
         let mut img: DynamicImage = DynamicImage::ImageRgba8(frame.into_buffer());
         img = normalize_img(img, pixel_scale);
-        let mut ascii_tokens: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, ascii_table);
-        tokenized_gif.append(&mut ascii_tokens);
+        let ascii_tokens: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, ascii_table);
+        let int_delay: u64 = (frame_ratio.0 / frame_ratio.1) as u64;
+        let ascii_frame: AsciiFrame = AsciiFrame {
+            frame_tokens: ascii_tokens,
+            delay: int_delay,
+        };
+        tokenized_gif.push(ascii_frame);
 
-        // might need to add whitespace between frames
+        // might need to add whitespace between frames?
     }
     return tokenized_gif;
 }
@@ -107,12 +119,14 @@ pub fn convert_gif_to_ascii_tokens(
 /// *   'path'  - file path to the text file
 /// *   'scale' - maximum bound used for width
 /// *   'detail_flag'   - dictate the amount of ascii characters use
-pub fn convert_to_ascii_tokens(
+pub fn convert_and_output(
     path_arg: String,
-    pixel_scale: u32,
+    pixel_scale: Option<u32>,
     detail_flag: bool,
+    color_flag: bool,
     mapping: Option<String>,
-) -> Result<Vec<AsciiToken>, &'static str> {
+) -> Result<(), &'static str> {
+    // get char mapping
     let ascii_table: Vec<char>;
     if mapping.is_none() {
         if detail_flag {
@@ -123,6 +137,12 @@ pub fn convert_to_ascii_tokens(
     } else {
         ascii_table = mapping.unwrap().chars().collect();
     }
+
+    // check for scale
+    let scale: u32 = match pixel_scale {
+        Some(scale) => scale,
+        None => 72,
+    };
     if is_supported_format(&path_arg) {
         let ext: &str = get_file_extension(&path_arg).expect("Could not read file path");
         if ext == "gif" {
@@ -130,16 +150,23 @@ pub fn convert_to_ascii_tokens(
                 .read(true)
                 .open(path_arg)
                 .expect("Could not read file");
-            let decoder: GifDecoder<File> = 
+            let decoder: GifDecoder<File> =
                 GifDecoder::new(file).expect("Decoder could not decode file");
-            let img_tokens: Vec<AsciiToken> = convert_gif_to_ascii_tokens(decoder, &ascii_table, pixel_scale);
-            return Ok(img_tokens);
+            let img_frames: Vec<AsciiFrame> =
+                convert_gif_to_ascii_tokens(decoder, &ascii_table, scale);
+
+            // print gif
+            print_gif_to_console(img_frames, color_flag);
+            return Ok(());
         } else {
             let mut img: DynamicImage =
                 image::open(PathBuf::from(path_arg)).expect("File not Found...");
-            img = normalize_img(img, pixel_scale);
+            img = normalize_img(img, scale);
             let img_tokens: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, &ascii_table);
-            return Ok(img_tokens);
+
+            // print img
+            print_img_to_console(img_tokens, color_flag);
+            return Ok(());
         }
     } else {
         return Err("File format not supported for file");
@@ -150,25 +177,12 @@ pub fn convert_to_ascii_tokens(
 ///
 /// # Arguments
 ///
-/// *   'path_arg' - string representation of file path to the text file
-/// *   'color_flag'    - option to print terminal output in color
-/// *   'detail_flag'   - dictate the amount of ascii characters use
-pub fn print_img_to_console(
-    path_arg: String,
-    color_flag: bool,
-    detail_flag: bool,
-    mapping: Option<String>,
-    pixel_scale: Option<u32>,
-) {
-    let scale: u32 = match pixel_scale {
-        Some(scale) => scale,
-        None => 72,
-    };
-    let img: Vec<AsciiToken> =
-        convert_to_ascii_tokens(path_arg, scale, detail_flag, mapping).unwrap();
+/// *   'img_tokens'    - Vector of Ascii tokens representing each pixel from the original image
+/// *   'color_flag'    - Defines color output for the terminal
+pub fn print_img_to_console(img_tokens: Vec<AsciiToken>, color_flag: bool) {
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
     if color_flag {
-        for token in img {
+        for token in img_tokens {
             stdout
                 .set_color(ColorSpec::new().set_fg(Some(Color::Rgb(
                     token.rbg.0,
@@ -179,8 +193,39 @@ pub fn print_img_to_console(
             write!(&mut stdout, "{}", token.token).expect("failed to write");
         }
     } else {
-        let img_str: String = img.iter().map(|ascii_token| ascii_token.token).collect();
+        let img_str: String = img_tokens
+            .iter()
+            .map(|ascii_token| ascii_token.token)
+            .collect();
         println!("{}", img_str);
+    }
+}
+
+pub fn print_gif_to_console(img_frames: Vec<AsciiFrame>, color_flag: bool) {
+    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    if color_flag {
+        for frame in img_frames {
+            for token in frame.frame_tokens {
+                stdout
+                    .set_color(ColorSpec::new().set_fg(Some(Color::Rgb(
+                        token.rbg.0,
+                        token.rbg.1,
+                        token.rbg.2,
+                    ))))
+                    .expect("Failed to set color");
+                write!(&mut stdout, "{}", token.token).expect("failed to write");
+            }
+        }
+    } else {
+        for frame in img_frames {
+            let img_str: String = frame
+                .frame_tokens
+                .iter()
+                .map(|ascii_token| ascii_token.token)
+                .collect();
+            println!("{}", img_str);
+            thread::sleep(Duration::from_millis(frame.delay));
+        }
     }
 }
 
@@ -194,7 +239,7 @@ mod test {
     use std::path::PathBuf;
 
     #[test]
-    fn normalize_test() {
+    fn normalize() {
         // resize preserves the aspect ratio
         let path: PathBuf = PathBuf::from("assets/ferris.jpg");
         match image::open(path) {
@@ -209,7 +254,7 @@ mod test {
     }
 
     #[test]
-    fn asciify_img_test() {
+    fn asciify_img() {
         let expected: char = '.';
         let actual: char = asciify_intensity(38, &ASCII_SIMPLE.to_vec());
         assert_eq!(expected, actual);
@@ -224,7 +269,7 @@ mod test {
     }
 
     #[test]
-    fn generate_img_test() {
+    fn generate_img() {
         let expected: String = String::from(
             "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -253,7 +298,9 @@ mod test {
 ",
         );
         let path: String = String::from("assets/ferris.jpg");
-        let res: Vec<AsciiToken> = convert_to_ascii_tokens(path, 72, false, None).unwrap();
+        let mut img: DynamicImage = image::open(PathBuf::from(path)).expect("File not Found...");
+        img = normalize_img(img, 72);
+        let res: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, &ASCII_SIMPLE.to_vec());
         let actual: String = res.iter().map(|ascii_token| ascii_token.token).collect();
         assert_eq!(expected, actual);
     }
@@ -289,8 +336,10 @@ mod test {
 ",
         );
         let path: String = String::from("assets/ferris.jpg");
-        let mapping: Option<String> = Some(String::from("-}"));
-        let res: Vec<AsciiToken> = convert_to_ascii_tokens(path, 72, false, mapping).unwrap();
+        let mapping: Vec<char> = vec!['-', '}'];
+        let mut img: DynamicImage = image::open(PathBuf::from(path)).expect("File not Found...");
+        img = normalize_img(img, 72);
+        let res: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, &mapping);
         let actual: String = res.iter().map(|ascii_token| ascii_token.token).collect();
         assert_eq!(expected, actual);
     }
@@ -308,7 +357,9 @@ mod test {
 ",
         );
         let path: String = String::from("assets/ferris.jpg");
-        let res: Vec<AsciiToken> = convert_to_ascii_tokens(path, 20, false, None).unwrap();
+        let mut img: DynamicImage = image::open(PathBuf::from(path)).expect("File not Found...");
+        img = normalize_img(img, 20);
+        let res: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, &ASCII_SIMPLE.to_vec());
         let actual: String = res.iter().map(|ascii_token| ascii_token.token).collect();
         assert_eq!(expected, actual);
     }
