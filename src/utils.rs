@@ -1,8 +1,4 @@
 use clap::{ Parser };
-use std::{
-    error::Error,
-    fmt
-};
 
 #[derive(Debug, Default, Parser)]
 #[command(author="Joe Adamson")] 
@@ -42,12 +38,26 @@ pub struct AsciiToken {
 }
 
 
-pub fn is_supported_format(path_arg: &String) -> bool {
+/// Returns file extension for a given file
+/// 
+/// # Arguments
+/// 
+/// *   'path_arg'  - file path
+pub fn get_file_extension(path_arg: &String) -> Option<&str> {
     let tokens: Vec<&str> = path_arg.split(".").collect();
     if tokens.len() == 1 {
-        return false;
+        return None;
     }
-    let last = tokens[tokens.len() - 1];
+    return Some(tokens[tokens.len() - 1]);
+}
+
+/// Check the format of a given file is parsable
+/// 
+/// # Arguments
+/// 
+/// *   'parth_arg' - file path   
+pub fn is_supported_format(path_arg: &String) -> bool {
+    let last: &str = get_file_extension(path_arg).expect("Could not parse file path");
     if last == "jpg" || last == "png" || last == "gif" {
         return true;
     } 
@@ -70,5 +80,21 @@ mod test {
     fn supported_format_test_2() {
         let dummy: String = String::from("dummy_file.wav");
         assert_ne!(true, is_supported_format(&dummy));
+    }
+
+    #[test]
+    fn get_file_extension_test() {
+        let dummy: String = String::from("dummy_file22.gif");
+        let expected: &str = "gif";
+        let actual: &str = get_file_extension(&dummy).unwrap();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn get_file_extension_test_2() {
+        let dummy: String = String::from("dummy_file22.pong.gif");
+        let expected: &str = "gif";
+        let actual: &str = get_file_extension(&dummy).unwrap();
+        assert_eq!(actual, expected);
     }
 }
