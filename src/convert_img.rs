@@ -1,13 +1,16 @@
-use crate::utils::{get_file_extension, is_supported_format, AsciiFrame, AsciiToken};
+use crate::utils::{
+    get_file_extension, is_supported_format, supports_truecolor, AsciiFrame, AsciiToken,
+};
 use image::{
     codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage, Frame,
     GenericImageView, Rgba,
 };
+use rgb2ansi256::rgb_to_ansi256;
 use std::{
     fs::{File, OpenOptions},
     io::Write,
     path::PathBuf,
-    thread,
+    process, thread,
     time::Duration,
 };
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -173,16 +176,11 @@ pub fn convert_and_output(
     }
 }
 
-/// Prints asciified image to the console
-///
-/// # Arguments
-///
-/// *   'img_tokens'    - Vector of Ascii tokens representing each pixel from the original image
-/// *   'color_flag'    - Defines color output for the terminal
-pub fn print_img_to_console(img_tokens: Vec<AsciiToken>, color_flag: bool) {
+fn write_color_output(tokens: Vec<AsciiToken>) {
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
-    if color_flag {
-        for token in img_tokens {
+    let truecolor_flag = supports_truecolor();
+    for token in tokens {
+        if truecolor_flag {
             stdout
                 .set_color(ColorSpec::new().set_fg(Some(Color::Rgb(
                     token.rbg.0,
@@ -190,8 +188,24 @@ pub fn print_img_to_console(img_tokens: Vec<AsciiToken>, color_flag: bool) {
                     token.rbg.2,
                 ))))
                 .expect("Failed to set color");
-            write!(&mut stdout, "{}", token.token).expect("failed to write");
+        } else {
+            let ansci_val: u8 = rgb_to_ansi256(token.rbg.0, token.rbg.1, token.rbg.2);
+            stdout.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(ansci_val))))
+                .expect("Failed to set color");
         }
+        write!(&mut stdout, "{}", token.token).expect("failed to write");
+    }
+}
+
+/// Prints asciified image to the console
+///
+/// # Arguments
+///
+/// *   'img_tokens'    - Vector of Ascii tokens representing each pixel from the original image
+/// *   'color_flag'    - Defines color output for the terminal
+pub fn print_img_to_console(img_tokens: Vec<AsciiToken>, color_flag: bool) {
+    if color_flag {
+        write_color_output(img_tokens)
     } else {
         let img_str: String = img_tokens
             .iter()
@@ -202,19 +216,11 @@ pub fn print_img_to_console(img_tokens: Vec<AsciiToken>, color_flag: bool) {
 }
 
 pub fn print_gif_to_console(img_frames: Vec<AsciiFrame>, color_flag: bool) {
-    let mut stdout = StandardStream::stdout(ColorChoice::Always);
     if color_flag {
         for frame in img_frames {
-            for token in frame.frame_tokens {
-                stdout
-                    .set_color(ColorSpec::new().set_fg(Some(Color::Rgb(
-                        token.rbg.0,
-                        token.rbg.1,
-                        token.rbg.2,
-                    ))))
-                    .expect("Failed to set color");
-                write!(&mut stdout, "{}", token.token).expect("failed to write");
-            }
+            process::Command::new("clear").status().unwrap();
+            write_color_output(frame.frame_tokens);
+            thread::sleep(Duration::from_millis(frame.delay));
         }
     } else {
         for frame in img_frames {
@@ -223,6 +229,7 @@ pub fn print_gif_to_console(img_frames: Vec<AsciiFrame>, color_flag: bool) {
                 .iter()
                 .map(|ascii_token| ascii_token.token)
                 .collect();
+            process::Command::new("clear").status().unwrap();
             println!("{}", img_str);
             thread::sleep(Duration::from_millis(frame.delay));
         }

@@ -1,4 +1,5 @@
 use clap::{ Parser };
+use std::env;
 
 #[derive(Debug, Default, Parser)]
 #[command(author="Joe Adamson")] 
@@ -6,7 +7,6 @@ use clap::{ Parser };
 /// Create cool ASCII images from jpg, png and gif files
 pub struct AsciiArgs {
     /// File(s) to be converted into ascii art
-    #[arg(long, short, num_args = 1.., value_delimiter = ' ')]
     pub files: Vec<String>,
 
     /// Save ascii output to a .txt file at the given file path
@@ -63,18 +63,30 @@ pub fn get_file_extension(path_arg: &String) -> Option<&str> {
 /// 
 /// *   'parth_arg' - file path   
 pub fn is_supported_format(path_arg: &String) -> bool {
-    let last: &str = get_file_extension(path_arg).expect("Could not parse file path");
+    let last: &str = get_file_extension(path_arg).expect("Could not parse file extension");
     if last == "jpg" || last == "png" || last == "gif" {
         return true;
     } 
     return false;
 }
 
+pub fn supports_truecolor() -> bool {
+    let key: &str = "COLORTERM";
+    let val: String = match env::var(key) {
+        Ok(colorterm) => colorterm,
+        Err(_) => String::from("none")
+    };
+    if val != "truecolor" {
+        return false;
+    }
+    return true;
+}
+
 
 #[cfg(test)]
 mod test {
 
-    use super::*;
+    use super::{*, supports_truecolor};
 
     #[test]
     fn supported_format_test() {
@@ -103,4 +115,10 @@ mod test {
         let actual: &str = get_file_extension(&dummy).unwrap();
         assert_eq!(actual, expected);
     }
+
+    // #[test]
+    // fn supports_truecolor_test() {
+    //     let res: bool = supports_truecolor();
+    //     assert!(res);
+    // }
 }
