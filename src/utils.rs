@@ -9,7 +9,8 @@ pub struct AsciiArgs {
     /// File(s) to be converted into ascii art
     pub files: Vec<String>,
 
-    /// Save ascii output to a .txt file at the given file path
+    /// Save ascii output to a either a png or gif format depending on the format
+    /// of ther original file. Files are saved individually.
     #[arg(long, short)]
     pub save_txt: Option<String>,
 
@@ -48,28 +49,41 @@ pub struct AsciiFrame {
 /// 
 /// # Arguments
 /// 
-/// *   'path_arg'  - file path
-pub fn get_file_extension(path_arg: &String) -> Option<&str> {
-    let tokens: Vec<&str> = path_arg.split(".").collect();
+/// * 'path_arg'  - file path
+pub fn get_file_extension(file_path: &String) -> Option<&str> {
+    let tokens: Vec<&str> = file_path.split(".").collect();
     if tokens.len() == 1 {
         return None;
     }
     return Some(tokens[tokens.len() - 1]);
 }
 
+/// Returns file name for saveed data
+/// 
+/// * 'path_arg'  - file path
+pub fn build_output_file_name(file_path: &String) -> Result<String, &'static str> {
+    let tokens: Vec<&str> = file_path.split(".").collect();
+    if tokens.len() < 2 {
+        return Err("Not a parsable file!");
+    } else {
+        return Ok(format!("asciify-{}.{}", tokens[0], tokens[1]));
+    }
+}
+
 /// Check the format of a given file is parsable
 /// 
 /// # Arguments
 /// 
-/// *   'parth_arg' - file path   
-pub fn is_supported_format(path_arg: &String) -> bool {
-    let last: &str = get_file_extension(path_arg).expect("Could not parse file extension");
+/// * 'parth_arg' - file path   
+pub fn is_supported_format(file_path: &String) -> bool {
+    let last: &str = get_file_extension(file_path).expect("Could not parse file extension");
     if last == "jpg" || last == "png" || last == "gif" {
         return true;
     } 
     return false;
 }
 
+/// Returns true if terminal application caller supports truecolor (16 million colors)
 pub fn supports_truecolor() -> bool {
     let key: &str = "COLORTERM";
     let val: String = match env::var(key) {
@@ -86,7 +100,7 @@ pub fn supports_truecolor() -> bool {
 #[cfg(test)]
 mod test {
 
-    use super::{*, supports_truecolor};
+    use super::*;
 
     #[test]
     fn supported_format_test() {
@@ -121,4 +135,12 @@ mod test {
     //     let res: bool = supports_truecolor();
     //     assert!(res);
     // }
+
+    #[test]
+    fn build_file_name_test() {
+        let dummy: String = String::from("ferris.png");
+        let expected: String = String::from("asciify-ferris.png");
+        let actual: String = build_output_file_name(&dummy).unwrap();
+        assert_eq!(expected, actual);
+    }
 }

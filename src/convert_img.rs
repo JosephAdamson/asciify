@@ -1,19 +1,14 @@
 use crate::utils::{
-    get_file_extension, is_supported_format, supports_truecolor, AsciiFrame, AsciiToken,
+    get_file_extension, is_supported_format, AsciiFrame, AsciiToken,
 };
 use image::{
     codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage, Frame,
     GenericImageView, Rgba,
 };
-use rgb2ansi256::rgb_to_ansi256;
 use std::{
     fs::{File, OpenOptions},
-    io::Write,
     path::PathBuf,
-    process, thread,
-    time::Duration,
 };
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 const ASCII_DETAILED: [char; 70] = [
     ' ', '.', '\'', '`', '^', '"', ',', ':', ';', 'I', 'l', '!', 'i', '>', '<', '~', '+', '_', '-',
@@ -26,12 +21,18 @@ const ASCII_SIMPLE: [char; 10] = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '
 
 const MAX_VALUE: f64 = 255.0;
 
+pub enum ConvertedFile {
+    IMAGE(Vec<AsciiToken>),
+    GIF(Vec<AsciiFrame>),
+    ERROR(String),
+}
+
 /// Returns an descaled Dynamic image
 ///
 /// # Arguments
 ///
-/// *   'img'           - a pixel matrix
-/// *   'pixel_scale'   - pixel scale factor used to resize the image
+/// * 'img'           - A pixel matrix
+/// * 'pixel_scale'   - pixel scale factor used to resize the image
 fn normalize_img(img: DynamicImage, pixel_scale: u32) -> DynamicImage {
     let (width, height) = img.dimensions();
     // if image is smaller than the provided scale we use the original width
@@ -46,8 +47,8 @@ fn normalize_img(img: DynamicImage, pixel_scale: u32) -> DynamicImage {
 ///
 /// # Arguments
 ///
-/// *   'intensity'     - pixel intensity
-/// *   'detail_flag'   - dictate the amount of ascii characters use
+/// * 'intensity'     - pixel intensity
+/// * 'detail_flag'   - dictate the amount of ascii characters use
 fn asciify_intensity(intensity: u32, ascii_table: &Vec<char>) -> char {
     let index: f64 = (intensity as f64 / MAX_VALUE) * ((ascii_table.len() - 1) as f64);
     return ascii_table[index as usize];
@@ -57,8 +58,8 @@ fn asciify_intensity(intensity: u32, ascii_table: &Vec<char>) -> char {
 ///
 /// # Arguments
 ///
-/// *   'img'           - Rgba pixel matrix
-/// *   'ascii_table'   - char vector of mappable ascii characters
+/// * 'img'           - Rgba pixel matrix
+/// * 'ascii_table'   - Char vector of mappable ascii characters
 fn convert_img_to_ascii_tokens(img: DynamicImage, ascii_table: &Vec<char>) -> Vec<AsciiToken> {
     let (width, height) = img.dimensions();
     let mut img_tokens: Vec<AsciiToken> = Vec::new();
@@ -87,6 +88,14 @@ fn convert_img_to_ascii_tokens(img: DynamicImage, ascii_table: &Vec<char>) -> Ve
     return img_tokens;
 }
 
+/// Returns a collection of frames, each frame representing an asciified version of the
+/// frame from the original input gif.
+///
+/// # Arguments
+///
+/// * 'gif'             - Gif file wrapped in a decoder
+/// * 'ascii_table'     - Char vector of mappable ascii characters
+/// * 'scale'           - Maximum bound used for width
 pub fn convert_gif_to_ascii_tokens(
     gif: GifDecoder<File>,
     ascii_table: &Vec<char>,
@@ -109,8 +118,6 @@ pub fn convert_gif_to_ascii_tokens(
             delay: int_delay,
         };
         tokenized_gif.push(ascii_frame);
-
-        // might need to add whitespace between frames?
     }
     return tokenized_gif;
 }
@@ -119,16 +126,15 @@ pub fn convert_gif_to_ascii_tokens(
 ///
 /// # Arguments
 ///
-/// *   'path'  - file path to the text file
-/// *   'scale' - maximum bound used for width
-/// *   'detail_flag'   - dictate the amount of ascii characters use
-pub fn convert_and_output(
+/// * 'path_arg'    - File path to the text file
+/// * 'scale'       - Maximum bound used for width
+/// * 'detail_flag' - Dictate the amount of ascii characters use
+pub fn process_file(
     path_arg: String,
     pixel_scale: Option<u32>,
     detail_flag: bool,
-    color_flag: bool,
     mapping: Option<String>,
-) -> Result<(), &'static str> {
+) -> ConvertedFile {
     // get char mapping
     let ascii_table: Vec<char>;
     if mapping.is_none() {
@@ -158,81 +164,17 @@ pub fn convert_and_output(
             let img_frames: Vec<AsciiFrame> =
                 convert_gif_to_ascii_tokens(decoder, &ascii_table, scale);
 
-            // print gif
-            print_gif_to_console(img_frames, color_flag);
-            return Ok(());
+            return ConvertedFile::GIF(img_frames);
         } else {
             let mut img: DynamicImage =
                 image::open(PathBuf::from(path_arg)).expect("File not Found...");
             img = normalize_img(img, scale);
             let img_tokens: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, &ascii_table);
 
-            // print img
-            print_img_to_console(img_tokens, color_flag);
-            return Ok(());
+            return ConvertedFile::IMAGE(img_tokens);
         }
     } else {
-        return Err("File format not supported for file");
-    }
-}
-
-fn write_color_output(tokens: Vec<AsciiToken>) {
-    let mut stdout = StandardStream::stdout(ColorChoice::Always);
-    let truecolor_flag = supports_truecolor();
-    for token in tokens {
-        if truecolor_flag {
-            stdout
-                .set_color(ColorSpec::new().set_fg(Some(Color::Rgb(
-                    token.rbg.0,
-                    token.rbg.1,
-                    token.rbg.2,
-                ))))
-                .expect("Failed to set color");
-        } else {
-            let ansci_val: u8 = rgb_to_ansi256(token.rbg.0, token.rbg.1, token.rbg.2);
-            stdout.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(ansci_val))))
-                .expect("Failed to set color");
-        }
-        write!(&mut stdout, "{}", token.token).expect("failed to write");
-    }
-}
-
-/// Prints asciified image to the console
-///
-/// # Arguments
-///
-/// *   'img_tokens'    - Vector of Ascii tokens representing each pixel from the original image
-/// *   'color_flag'    - Defines color output for the terminal
-pub fn print_img_to_console(img_tokens: Vec<AsciiToken>, color_flag: bool) {
-    if color_flag {
-        write_color_output(img_tokens)
-    } else {
-        let img_str: String = img_tokens
-            .iter()
-            .map(|ascii_token| ascii_token.token)
-            .collect();
-        println!("{}", img_str);
-    }
-}
-
-pub fn print_gif_to_console(img_frames: Vec<AsciiFrame>, color_flag: bool) {
-    if color_flag {
-        for frame in img_frames {
-            process::Command::new("clear").status().unwrap();
-            write_color_output(frame.frame_tokens);
-            thread::sleep(Duration::from_millis(frame.delay));
-        }
-    } else {
-        for frame in img_frames {
-            let img_str: String = frame
-                .frame_tokens
-                .iter()
-                .map(|ascii_token| ascii_token.token)
-                .collect();
-            process::Command::new("clear").status().unwrap();
-            println!("{}", img_str);
-            thread::sleep(Duration::from_millis(frame.delay));
-        }
+        return ConvertedFile::ERROR(String::from("File format not supported for file"));
     }
 }
 
