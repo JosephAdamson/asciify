@@ -126,13 +126,13 @@ pub fn write_img(
     scale: Scale,
     font: &Font
 ) {
-    let mut y_pointer: i32 = 0;
-    let mut x_pointer: i32 = 0 - SEGMENT_CONSTANT as i32;
+    let mut y_pointer: i32 = SEGMENT_CONSTANT as i32;
+    let mut x_pointer: i32 = 0;
     for token in img_tokens {
         // skip rendundant token for rendering and move on to the next line
         if token.token == '\n' {
             y_pointer = y_pointer + (SEGMENT_CONSTANT as i32 * 2);
-            x_pointer = 0 - SEGMENT_CONSTANT as i32;
+            x_pointer = 0 as i32;
             continue;
         }
 
@@ -168,7 +168,8 @@ pub fn save_img(tokens: Vec<AsciiToken>, color_flag: bool, output_file_name: Str
     let (w, h) = (tokens[0].parent_img_width, tokens[0].parent_img_height);
     let y_axis: u32 = h * SEGMENT_CONSTANT;
     let x_axis: u32 = w * SEGMENT_CONSTANT;
-    let mut img_canvas: ImageBuffer<image::Rgba<u8>, Vec<u8>> = RgbaImage::new(x_axis, y_axis);
+    let mut img_canvas: ImageBuffer<image::Rgba<u8>, Vec<u8>> = 
+        RgbaImage::new(x_axis + (SEGMENT_CONSTANT as u32 * 2), y_axis + (SEGMENT_CONSTANT as u32 * 2));
 
     let font: Vec<u8> = Vec::from(include_bytes!("../assets/Roboto-Regular.ttf") as &[u8]);
     let font: Font = Font::try_from_vec(font).unwrap();
@@ -209,10 +210,10 @@ pub fn save_gif(frames: Vec<AsciiFrame>, color_flag: bool, output_file_name: &St
     let mut result: Vec<Frame> = Vec::new();
     // TODO: optimize this?
     for frame in frames {
-        // give each frame a black background
+        // give each frame a blackground, segment * 2 for extra padding
         let mut img_canvas = RgbaImage::from_pixel(
-            x_axis, 
-            y_axis, 
+            x_axis + (SEGMENT_CONSTANT as u32 * 2), 
+            y_axis + (SEGMENT_CONSTANT as u32 * 2), 
             Rgba([0, 0, 0, 255]));
         // color background experiment
         
