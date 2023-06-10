@@ -12,7 +12,7 @@ fn main() {
         for path_arg in args.files { 
             output_to_console(
                 path_arg, 
-                args.pixel_scale, 
+                args.scale_factor, 
                 args.detailed, 
                 args.color,
                 args.mapping.clone()).expect("Could not output to console");
@@ -25,7 +25,7 @@ fn main() {
                     args.detailed, 
                     args.color, 
                     args.mapping.clone(), 
-                    args.pixel_scale).expect("Could not save to file");
+                    args.scale_factor).expect("Could not save to file");
             } else {
                 panic!("Error: format not supported");
             }

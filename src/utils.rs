@@ -12,7 +12,7 @@ pub struct AsciiArgs {
 
     /// Save ascii output to a either a png or gif format depending on the format
     /// of ther original file. Files are saved individually.
-    #[arg(long, short)]
+    #[arg(long)]
     pub save: bool,
 
     /// Print color ascii image(s) to the terminal
@@ -30,7 +30,7 @@ pub struct AsciiArgs {
 
     /// Scale factor for output image
     #[arg(long, short)]
-    pub pixel_scale: Option<u32>
+    pub scale_factor: Option<u32>
 }
 
 // encode the dimensions of the original image the pixel belongs to

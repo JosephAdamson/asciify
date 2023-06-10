@@ -87,17 +87,17 @@ pub fn print_gif_to_console(img_frames: Vec<AsciiFrame>, color_flag: bool) {
 ///
 /// # Arguments
 ///
-/// * 'path_arg'    - File path to the text file
-/// * 'pixel_scale'       - Maximum bound used for width
-/// * 'detail_flag' - Dictate the amount of ascii characters use
+/// * 'path_arg'            - File path to the text file
+/// * 'scale_factor'        - Maximum bound used for width
+/// * 'detail_flag'         - Dictate the amount of ascii characters use
 pub fn output_to_console(
     path_arg: String,
-    pixel_scale: Option<u32>,
+    scale_factor: Option<u32>,
     detail_flag: bool,
     color_flag: bool,
     mapping: Option<String>,
 ) -> Result<(), &'static str> {
-    match process_file(path_arg, pixel_scale, detail_flag, mapping) {
+    match process_file(path_arg, scale_factor, detail_flag, mapping) {
         ConvertedFile::IMAGE(img_tokens) => {
             print_img_to_console(img_tokens, color_flag);
             return Ok(());
@@ -245,17 +245,17 @@ pub fn save_gif(frames: Vec<AsciiFrame>, color_flag: bool, output_file_name: &St
 /// * 'path_arg'        - File path to the text file
 /// * 'detail_flag'     - Dictate the amount of ascii characters use
 /// * 'color_flag'      - Defines color output for the terminal
-/// * 'pixel_scale'     - Maximum bound used for width
+/// * 'scale_factor'     - Maximum bound used for width
 pub fn save(
     path_arg: String,
     detail_flag: bool,
     color_flag: bool,
     mapping: Option<String>,
-    pixel_scale: Option<u32>,
+    scale_factor: Option<u32>,
 ) -> Result<(), &'static str>{
     let file_name: String = build_output_file_name(&path_arg).unwrap();
 
-    let ascii_data: ConvertedFile = process_file(path_arg, pixel_scale, detail_flag, mapping);
+    let ascii_data: ConvertedFile = process_file(path_arg, scale_factor, detail_flag, mapping);
     match ascii_data {
         ConvertedFile::IMAGE(img) => {
             save_img(img, color_flag, file_name);

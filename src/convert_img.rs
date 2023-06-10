@@ -32,14 +32,14 @@ pub enum ConvertedFile {
 /// # Arguments
 ///
 /// * 'img'           - A pixel matrix
-/// * 'pixel_scale'   - pixel scale factor used to resize the image
-fn normalize_img(img: DynamicImage, pixel_scale: u32) -> DynamicImage {
+/// * 'scale_factor'  - pixel scale factor used to resize the image
+fn normalize_img(img: DynamicImage, scale_factor: u32) -> DynamicImage {
     let (width, height) = img.dimensions();
     // if image is smaller than the provided scale we use the original width
-    if width < pixel_scale {
+    if width < scale_factor {
         return img.resize(width, height, FilterType::Gaussian);
     } else {
-        return img.resize(pixel_scale, pixel_scale, FilterType::Gaussian);
+        return img.resize(scale_factor, scale_factor, FilterType::Gaussian);
     }
 }
 
@@ -99,11 +99,11 @@ fn convert_img_to_ascii_tokens(img: DynamicImage, ascii_table: &Vec<char>) -> Ve
 ///
 /// * 'gif'             - Gif file wrapped in a decoder
 /// * 'ascii_table'     - Char vector of mappable ascii characters
-/// * 'scale'           - Maximum bound used for width
+/// * 'scale_factor'    - Maximum bound used for width
 pub fn convert_gif_to_ascii_tokens(
     gif: GifDecoder<File>,
     ascii_table: &Vec<char>,
-    pixel_scale: u32,
+    scale_factor: u32,
 ) -> Vec<AsciiFrame> {
     let frames: Vec<Frame> = gif
         .into_frames()
@@ -114,7 +114,7 @@ pub fn convert_gif_to_ascii_tokens(
     for frame in frames {
         let frame_ratio: (u32, u32) = frame.delay().clone().numer_denom_ms();
         let mut img: DynamicImage = DynamicImage::ImageRgba8(frame.into_buffer());
-        img = normalize_img(img, pixel_scale);
+        img = normalize_img(img, scale_factor);
         let ascii_tokens: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, ascii_table);
         let int_delay: (u64, u64) = (frame_ratio.0 as u64, frame_ratio.1 as u64);
         let ascii_frame: AsciiFrame = AsciiFrame {
@@ -130,12 +130,12 @@ pub fn convert_gif_to_ascii_tokens(
 ///
 /// # Arguments
 ///
-/// * 'path_arg'    - File path to the text file
-/// * 'scale'       - Maximum bound used for width
-/// * 'detail_flag' - Dictate the amount of ascii characters use
+/// * 'path_arg'        - File path to the text file
+/// * 'scale_factor'    - Maximum bound used for width
+/// * 'detail_flag'     - Dictate the amount of ascii characters use
 pub fn process_file(
     path_arg: String,
-    pixel_scale: Option<u32>,
+    scale_factor: Option<u32>,
     detail_flag: bool,
     mapping: Option<String>,
 ) -> ConvertedFile {
@@ -152,7 +152,7 @@ pub fn process_file(
     }
 
     // check for scale
-    let scale: u32 = match pixel_scale {
+    let scale: u32 = match scale_factor {
         Some(scale) => scale,
         None => 72,
     };
