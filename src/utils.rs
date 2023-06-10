@@ -12,7 +12,7 @@ pub struct AsciiArgs {
     /// Save ascii output to a either a png or gif format depending on the format
     /// of ther original file. Files are saved individually.
     #[arg(long, short)]
-    pub save_txt: Option<String>,
+    pub save: bool,
 
     /// Print color ascii image(s) to the terminal
     #[arg(long, short)]
@@ -32,16 +32,20 @@ pub struct AsciiArgs {
     pub pixel_scale: Option<u32>
 }
 
-
+// encode the dimensions of the original image the pixel belongs to
+// for ease of processing file output
+#[derive(Debug)]
 pub struct AsciiToken {
     pub token: char,
-    pub rbg: (u8, u8, u8)
+    pub rgb: (u8, u8, u8),
+    pub parent_img_width: u32,
+    pub parent_img_height: u32
 }
 
-
+#[derive(Debug)]
 pub struct AsciiFrame {
     pub frame_tokens: Vec<AsciiToken>,
-    pub delay: u64
+    pub delay: (u64, u64)
 }
 
 
@@ -62,7 +66,9 @@ pub fn get_file_extension(file_path: &String) -> Option<&str> {
 /// 
 /// * 'path_arg'  - file path
 pub fn build_output_file_name(file_path: &String) -> Result<String, &'static str> {
-    let tokens: Vec<&str> = file_path.split(".").collect();
+    let dirs: Vec<&str> = file_path.split("/").collect();
+    let tokens: Vec<&str> = dirs[dirs.len() -1].split(".").collect();
+    println!("{:?}", tokens);
     if tokens.len() < 2 {
         return Err("Not a parsable file!");
     } else {
@@ -140,6 +146,14 @@ mod test {
     fn build_file_name_test() {
         let dummy: String = String::from("ferris.png");
         let expected: String = String::from("asciify-ferris.png");
+        let actual: String = build_output_file_name(&dummy).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn build_file_name_test_2() {
+        let dummy: String = String::from("../../assets/mario.png");
+        let expected: String = String::from("asciify-mario.png");
         let actual: String = build_output_file_name(&dummy).unwrap();
         assert_eq!(expected, actual);
     }

@@ -74,14 +74,18 @@ fn convert_img_to_ascii_tokens(img: DynamicImage, ascii_table: &Vec<char>) -> Ve
                 let token: char = asciify_intensity(intensity, &ascii_table);
                 img_tokens.push(AsciiToken {
                     token,
-                    rbg: (pixel[0], pixel[1], pixel[2]),
+                    rgb: (pixel[0], pixel[1], pixel[2]),
+                    parent_img_width: width,
+                    parent_img_height: height
                 });
             }
         }
         if y % 2 == 0 {
             img_tokens.push(AsciiToken {
                 token: '\n',
-                rbg: (0, 0, 0),
+                rgb: (0, 0, 0),
+                parent_img_width: width,
+                parent_img_height: height
             });
         }
     }
@@ -112,7 +116,7 @@ pub fn convert_gif_to_ascii_tokens(
         let mut img: DynamicImage = DynamicImage::ImageRgba8(frame.into_buffer());
         img = normalize_img(img, pixel_scale);
         let ascii_tokens: Vec<AsciiToken> = convert_img_to_ascii_tokens(img, ascii_table);
-        let int_delay: u64 = (frame_ratio.0 / frame_ratio.1) as u64;
+        let int_delay: (u64, u64) = (frame_ratio.0 as u64, frame_ratio.1 as u64);
         let ascii_frame: AsciiFrame = AsciiFrame {
             frame_tokens: ascii_tokens,
             delay: int_delay,
@@ -312,4 +316,11 @@ mod test {
         let actual: String = res.iter().map(|ascii_token| ascii_token.token).collect();
         assert_eq!(expected, actual);
     }
+
+    // #[test]
+    // fn get_dims_test() {let path: String = String::from("assets/ferris.jpg");
+    //     let expected: (u32, u32) = (730, 487);
+    //     let actual: (u32, u32) = get_dimensions(&path, Option::None);
+    //     assert_eq!(actual, expected);
+    // }
 }
