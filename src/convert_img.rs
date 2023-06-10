@@ -24,7 +24,7 @@ const MAX_VALUE: f64 = 255.0;
 pub enum ConvertedFile {
     IMAGE(Vec<AsciiToken>),
     GIF(Vec<AsciiFrame>),
-    ERROR(String),
+    ERROR,
 }
 
 /// Returns an descaled Dynamic image
@@ -178,7 +178,7 @@ pub fn process_file(
             return ConvertedFile::IMAGE(img_tokens);
         }
     } else {
-        return ConvertedFile::ERROR(String::from("File format not supported for file"));
+        return ConvertedFile::ERROR;
     }
 }
 

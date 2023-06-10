@@ -1,12 +1,9 @@
 mod convert_img;
 mod img_out;
 mod utils;
-
-use utils::{AsciiArgs, is_supported_format, get_file_extension};
+use utils::{AsciiArgs, is_supported_format};
 use clap::Parser;
 use img_out::{output_to_console, save};
-//use img_out::save;
-
 
 fn main() {
     let args: AsciiArgs = AsciiArgs::parse();
@@ -18,7 +15,7 @@ fn main() {
                 args.pixel_scale, 
                 args.detailed, 
                 args.color,
-                args.mapping.clone()).unwrap();
+                args.mapping.clone()).expect("Could not output to console");
         }
     } else {
         // check format 
@@ -28,9 +25,9 @@ fn main() {
                     args.detailed, 
                     args.color, 
                     args.mapping.clone(), 
-                    args.pixel_scale)
+                    args.pixel_scale).expect("Could not save to file");
             } else {
-                // throw error
+                panic!("Error: format not supported");
             }
         }
     }    

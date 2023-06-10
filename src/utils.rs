@@ -4,7 +4,8 @@ use std::env;
 #[derive(Debug, Default, Parser)]
 #[command(author="Joe Adamson")] 
 #[command(version = "1.0")]
-/// Create cool ASCII images from jpg, png and gif files
+/// Create cool ASCII images from jpg, png and gif files!
+ 
 pub struct AsciiArgs {
     /// File(s) to be converted into ascii art
     pub files: Vec<String>,
@@ -68,7 +69,6 @@ pub fn get_file_extension(file_path: &String) -> Option<&str> {
 pub fn build_output_file_name(file_path: &String) -> Result<String, &'static str> {
     let dirs: Vec<&str> = file_path.split("/").collect();
     let tokens: Vec<&str> = dirs[dirs.len() -1].split(".").collect();
-    println!("{:?}", tokens);
     if tokens.len() < 2 {
         return Err("Not a parsable file!");
     } else {

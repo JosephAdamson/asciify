@@ -1,6 +1,6 @@
 use crate::convert_img::{process_file, ConvertedFile};
 use crate::utils::{build_output_file_name, supports_truecolor, AsciiFrame, AsciiToken};
-use image::{ImageBuffer, Rgba, RgbaImage, Frame, Delay, codecs::gif::GifEncoder};
+use image::{ImageBuffer, Rgba, RgbaImage, Frame, Delay, codecs::gif::{GifEncoder, Repeat}};
 use imageproc::drawing::draw_text_mut;
 use rgb2ansi256::rgb_to_ansi256;
 use rusttype::{Font, Scale};
@@ -106,7 +106,7 @@ pub fn output_to_console(
             print_gif_to_console(img_frames, color_flag);
             return Ok(());
         }
-        ConvertedFile::ERROR(e) => panic!("{}", e),
+        ConvertedFile::ERROR => return Err("Could not print to the console")
     };
 }
 
@@ -168,8 +168,10 @@ pub fn save_img(tokens: Vec<AsciiToken>, color_flag: bool, output_file_name: Str
     let (w, h) = (tokens[0].parent_img_width, tokens[0].parent_img_height);
     let y_axis: u32 = h * SEGMENT_CONSTANT;
     let x_axis: u32 = w * SEGMENT_CONSTANT;
-    let mut img_canvas: ImageBuffer<image::Rgba<u8>, Vec<u8>> = 
-        RgbaImage::new(x_axis + (SEGMENT_CONSTANT as u32 * 2), y_axis + (SEGMENT_CONSTANT as u32 * 2));
+    let mut img_canvas = RgbaImage::from_pixel(
+        x_axis + (SEGMENT_CONSTANT as u32 * 2), 
+        y_axis + (SEGMENT_CONSTANT as u32 * 2), 
+        Rgba([0, 0, 0, 255]));
 
     let font: Vec<u8> = Vec::from(include_bytes!("../assets/Roboto-Regular.ttf") as &[u8]);
     let font: Font = Font::try_from_vec(font).unwrap();
@@ -206,16 +208,15 @@ pub fn save_gif(frames: Vec<AsciiFrame>, color_flag: bool, output_file_name: &St
         x: font_size,
         y: font_size,
     };
-
+    println!("Saving gif...");
     let mut result: Vec<Frame> = Vec::new();
     // TODO: optimize this?
     for frame in frames {
-        // give each frame a blackground, segment * 2 for extra padding
+        // give each frame a blackground, add segment * 2 for extra padding on each axis
         let mut img_canvas = RgbaImage::from_pixel(
             x_axis + (SEGMENT_CONSTANT as u32 * 2), 
             y_axis + (SEGMENT_CONSTANT as u32 * 2), 
             Rgba([0, 0, 0, 255]));
-        // color background experiment
         
         write_img(&mut img_canvas, frame.frame_tokens, color_flag, scale, &font);
         let f: Frame = Frame::from_parts(img_canvas, 0, 0, Delay::from_numer_denom_ms(
@@ -233,6 +234,7 @@ pub fn save_gif(frames: Vec<AsciiFrame>, color_flag: bool, output_file_name: &St
         .expect("File could not be read");
 
     let mut encoder: GifEncoder<File> = GifEncoder::new(file);
+    encoder.set_repeat(Repeat::Infinite).unwrap();
     encoder.encode_frames(result).unwrap();
 }
 
@@ -250,15 +252,21 @@ pub fn save(
     color_flag: bool,
     mapping: Option<String>,
     pixel_scale: Option<u32>,
-) {
+) -> Result<(), &'static str>{
     let file_name: String = build_output_file_name(&path_arg).unwrap();
 
     let ascii_data: ConvertedFile = process_file(path_arg, pixel_scale, detail_flag, mapping);
     match ascii_data {
-        ConvertedFile::IMAGE(img) => save_img(img, color_flag, file_name),
-        ConvertedFile::GIF(gif) => save_gif(gif, color_flag, &file_name),
-        ConvertedFile::ERROR(e) => {
-            panic!("{}", e);
+        ConvertedFile::IMAGE(img) => {
+            save_img(img, color_flag, file_name);
+            return Ok(());
+        },
+        ConvertedFile::GIF(gif) => {
+            save_gif(gif, color_flag, &file_name);
+            return Ok(());
+        },
+        ConvertedFile::ERROR => {
+            return Err("File format not supported");
         }
     }
 }
