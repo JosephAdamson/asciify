@@ -97,3 +97,7 @@ Supports multiple file args (as with the default command which prints to the ter
 ```
 asciify <file_1, file_1 ...> --save
 ```
+<div style="display: flex; width:800px">
+    <img style="width: 50%" src="assets/aqua_carl.gif">
+    <img style="width: 50%" src="assets/demo/asciify-aqua_carl.gif">
+</div>
