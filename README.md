@@ -17,13 +17,13 @@ Supported file formats:
 
 ## Download locally to mac
 
-    1. Clone repo.
-    2. cd into project director of download. 
-    3. To build executable run `cargo build --release`.
-    4. Remove the unidentified dev attribute with 'sudo xattr -d com.apple.quarantine <asciify executable>'.
-    5. Allow read and execute permissions with 'sudo chmod a+rx <asciify executable>'.
-    6. Move to your local bin directory with 'sudo mv <asciify executable> /usr/local/bin'.
-    5. You can now use the 'asciify' command from your command line, try asciify -h to get started.
+1. Clone repo.
+2. cd into project director of download. 
+3. To build executable run `cargo build --release`.
+4. Remove the unidentified dev attribute with 'sudo xattr -d com.apple.quarantine <asciify executable>'.
+5. Allow read and execute permissions with 'sudo chmod a+rx <asciify executable>'.
+6. Move to your local bin directory with 'sudo mv <asciify executable> /usr/local/bin'.
+5. You can now use the 'asciify' command from your command line, try asciify -h to get started.
 
 # Basic usage
 Simply follow the command with the path to the files you want converted.
