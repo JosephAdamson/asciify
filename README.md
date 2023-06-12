@@ -8,7 +8,7 @@
  ```
 
 A commandline tool that converts images and gifs into ascii art that can be printed to the 
-terminal or save as a new file. 
+terminal or saved as a new file. 
 
 Supported file formats:
 * JPEG/JPG
@@ -20,20 +20,20 @@ Supported file formats:
 1. Clone repo.
 2. cd into project director of download. 
 3. To build executable run `cargo build --release`.
-4. Remove the unidentified dev attribute with `sudo xattr -d com.apple.quarantine <asciify executable>`.
+4. Remove the unidentified dev attribute from the executable with `sudo xattr -d com.apple.quarantine <asciify executable>`.
 5. Allow read and execute permissions with `sudo chmod a+rx <asciify executable>`.
 6. Move to your local bin directory with `sudo mv <asciify executable> /usr/local/bin`.
-5. You can now use the 'asciify' command from your command line, try asciify -h to get started.
+5. Congratualtions, you can now use the 'asciify' command from your command line. Try asciify -h to get started.
 
 # Basic usage
-Simply follow the command with the path to the files you want converted.
+Simply follow the command with the path to the file(s) you want converted.
 ```
 asciify <image file paths>
 ```
 
 <img src="assets/demo/default_gif_use.gif">
 
-You can supply multiple file/path arguments
+Supports multiple file path/url arguments.
 ```
 asciify <file_1, file_1 ...>
 ```
@@ -43,7 +43,7 @@ asciify <file_1, file_1 ...>
 # Flags
 
 ### --color or -c
-Allows to display images/gifs with their original color
+Display images/gifs with their original color.
 > **Note:** To use this feature you terminal appication MUST support 24-bit or 8-bit colors, coloring will default to
 > [truecolor](https://gist.github.com/CMCDragonkai/146100155ecd79c7dac19a9e23e6a362) if availble else 8-bit ansi color
 > codes will be used.
@@ -56,7 +56,7 @@ asciify <image file paths> -c
 <img src="assets/demo/color_use.gif">
 
 ### --detailed or -d
-Allows pixel output intensity to be encoded with a wider range of characters (70 as opposed to the default 10)
+Allow pixel output intensity to be encoded with a wider range of characters (70 as opposed to the default 10).
 ```
 asciify <image file paths> --detailed
 
@@ -66,7 +66,7 @@ asciify <image file paths> -d
 <img src="assets/demo/detail_flag.gif">
 
 ### --mapping or -m
-User can provide custom character string which will be used to encode the pixel intensities of the resulting image.
+Provide a custom character string which will be used to encode the pixel intensities of the resulting image.
 ```
 asciify <image file paths> --mapping <custom string>
 
@@ -93,7 +93,7 @@ Save output to file.
 ```
 asciify <image file path> --save
 ```
-Supports multiple file args (as with the default command which prints to the terminal)
+Supports multiple file args (each file will be saved to their own corresponding output file).
 ```
 asciify <file_1, file_1 ...> --save
 ```
