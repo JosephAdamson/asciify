@@ -15,7 +15,15 @@ Supported file formats:
 * PNG
 * GIF
 
-## Download locally to mac
+# Installation
+
+## Download on MacOS via homebrew
+
+1. `brew tap JosephAdamson/asciify`
+2. `brew install asccify`
+
+
+## Download locally to MacOS
 
 1. Clone repo.
 2. cd into project director of download. 
