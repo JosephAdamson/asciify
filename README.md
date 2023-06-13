@@ -97,7 +97,6 @@ asciify <image file paths> -m <integer scale>
 ### --save
 >**Note:** the output file format will correspond to the original file
 > **e.g. my_file.gif -> asciify-my_file.gif**
-Save output to file.
 ```
 asciify <image file path> --save
 ```
