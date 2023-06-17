@@ -96,7 +96,7 @@ pub fn output_to_console(
     detail_flag: bool,
     color_flag: bool,
     mapping: Option<String>,
-) -> Result<(), &'static str> {
+) -> Result<(), String> {
     match process_file(path_arg, scale_factor, detail_flag, mapping) {
         ConvertedFile::IMAGE(img_tokens) => {
             print_img_to_console(img_tokens, color_flag);
@@ -106,7 +106,7 @@ pub fn output_to_console(
             print_gif_to_console(img_frames, color_flag);
             return Ok(());
         }
-        ConvertedFile::ERROR => return Err("Could not print to the console")
+        ConvertedFile::ERROR(msg) => return Err(msg)
     };
 }
 
@@ -252,7 +252,7 @@ pub fn save(
     color_flag: bool,
     mapping: Option<String>,
     scale_factor: Option<u32>,
-) -> Result<(), &'static str>{
+) -> Result<(), String>{
     let file_name: String = build_output_file_name(&path_arg).unwrap();
 
     let ascii_data: ConvertedFile = process_file(path_arg, scale_factor, detail_flag, mapping);
@@ -265,8 +265,8 @@ pub fn save(
             save_gif(gif, color_flag, &file_name);
             return Ok(());
         },
-        ConvertedFile::ERROR => {
-            return Err("File format not supported");
+        ConvertedFile::ERROR(msg) => {
+            return Err(msg);
         }
     }
 }

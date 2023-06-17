@@ -83,7 +83,7 @@ pub fn build_output_file_name(file_path: &String) -> Result<String, &'static str
 /// * 'parth_arg' - file path   
 pub fn is_supported_format(file_path: &String) -> bool {
     let last: &str = get_file_extension(file_path).expect("Could not parse file extension");
-    if last == "jpg" || last == "png" || last == "gif" {
+    if last == "jpg" || last == "jpeg" || last == "png" || last == "gif" {
         return true;
     } 
     return false;
