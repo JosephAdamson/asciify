@@ -26,7 +26,7 @@ Supported file formats:
 ## Download locally to MacOS
 
 1. Clone repo.
-2. cd into project director of download. 
+2. cd into project directory of download. 
 3. To build executable run `cargo build --release`.
 4. Remove the unidentified dev attribute from the executable with `sudo xattr -d com.apple.quarantine <asciify executable>`.
 5. Allow read and execute permissions with `sudo chmod a+rx <asciify executable>`.
